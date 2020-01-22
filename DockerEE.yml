@@ -1,0 +1,68 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: yes
+  vars:
+    required_packages:
+      - apt-transport-https
+      - curl
+      - software-properties-common
+
+  tasks:
+
+  - name: Include vars of vault.yml
+    include_vars:
+      file: vault.yml
+
+  - name: Only run "update_cache=yes" if the last one is more than 3600 seconds ago
+    apt:
+      update_cache: yes
+      cache_valid_time: 3600
+
+  - name: Installed required packages
+    apt:
+      name: "{{ required_packages }}"
+
+  - name: Add the official Docker GPG key
+    shell: curl -fsSL "${DOCKER_EE_REPO}/ubuntu/gpg" | sudo apt-key add - && touch docker_gpg.success
+    args:
+      creates: docker_gpg.success
+    environment:
+      DOCKER_EE_REPO: "{{ docker_ee_download_url }}"
+
+  - name: Add Docker EE Repo
+    shell: add-apt-repository "deb [arch=amd64] $DOCKER_EE_REPO/ubuntu $(lsb_release -cs) stable-17.06" && touch DockerEE.success
+    args:
+      creates: DockerEE.success
+    environment:
+      DOCKER_EE_REPO: "{{ docker_ee_download_url }}"
+    register: DockerEE
+
+  - name: Only run "update_cache=yes" if the last one is more than 3600 seconds ago
+    apt:
+      update_cache: yes
+    when: DockerEE.changed == True
+
+  - name: Remove any previous editions of Docker
+    apt:
+      name: docker docker-engine docker-ce docker.io
+      state: absent
+
+  - name: Install Docker EE
+    apt:
+      name: docker-ee
+      state: present
+
+  - name: Add the vagrant user to the docker group
+    user:
+      name: vagrant
+      groups: docker
+      append: yes
+
+  - name: What docker verison do we have?
+    shell: docker version
+    register: DockerEE
+
+  - assert:
+      that:
+        - "'Docker Enterprise Edition (EE)' in DockerEE.stdout"
