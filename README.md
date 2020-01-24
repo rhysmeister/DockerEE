@@ -3,7 +3,6 @@ A box to play around with Docker EE
 
 # Setup
 
-* Put your docker_subscription.txt file into the files/ dir. This is downloaded from your Docker Hub account.
 * Put your Docker Enterprise download url into a vault encrypted file called vault.yml in the following format...
 
 ```
@@ -14,4 +13,16 @@ Encrypt with...
 
 ```
 ansible-vault encrypt vault.yml
+```
+
+When Vagrant runs the Ansible Playbook you will be prompted for the vault password.
+
+# Install UCP
+
+```
+docker container run --rm -it --name ucp \
+   -v /var/run/docker.sock:/var/run/docker.sock \
+   docker/ucp:2.2.5 install \
+   --host-address <node-ip-address> \
+   --interactive
 ```
